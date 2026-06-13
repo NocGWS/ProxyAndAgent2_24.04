@@ -110,7 +110,6 @@ function Hostname_proxy() {
 
   if [[ ! "$HOSTNAME_INPUT" =~ ^[A-Za-z0-9._-]+$ ]]; then
     log "Error: el valor ingresado contiene caracteres no permitidos."
-    log "Use solo letras, números, punto, guion o guion bajo."
     exit 1
   fi
 
@@ -119,14 +118,7 @@ function Hostname_proxy() {
 
   hostnamectl set-hostname "$HOSTNAME_PROXY"
 
-  CURRENT_HOSTNAME=$(hostname)
-
-  if [ "$CURRENT_HOSTNAME" != "$HOSTNAME_PROXY" ]; then
-      log "Error: no se pudo configurar correctamente el hostname."
-      exit 1
-  fi
-
-  log "Hostname Linux configurado: $CURRENT_HOSTNAME"
+  log "Hostname Linux configurado: $HOSTNAME_PROXY"
   log "ProxyName: $HOSTNAME_PROXY"
   log "Agent Hostname: $HOSTNAME_AGENT"
 }
@@ -432,6 +424,7 @@ Config_zabbix_proxy() {
   fi
 }
 
+
 # Funcion de Recargar la caché de configuración de Zabbix Proxy
 RecargaCache() {
 
@@ -442,6 +435,23 @@ else
   log "Error: No se pudo recargar la caché de configuración de Zabbix Proxy."
   exit 1
 fi
+}
+
+function validate_hostname_final() {
+  log "=============================="
+  log "Validando hostname final"
+  log "=============================="
+
+  CURRENT_HOSTNAME=$(hostnamectl --static)
+
+  if [ "$CURRENT_HOSTNAME" != "$HOSTNAME_PROXY" ]; then
+    log "Error: Hostname final incorrecto."
+    log "Esperado: $HOSTNAME_PROXY"
+    log "Actual: $CURRENT_HOSTNAME"
+    exit 1
+  fi
+
+  log "Hostname final validado correctamente: $CURRENT_HOSTNAME"
 }
 
 
@@ -463,6 +473,7 @@ ZabbixBD
 BannerConfZabbixProxy
 Config_zabbix_proxy
 RecargaCache
+validate_hostname_final
 
 # Marca el archivo como ejecutado
 touch "$flag_file"
