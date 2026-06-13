@@ -114,7 +114,7 @@ function Hostname_proxy() {
     exit 1
   fi
 
-  HOSTNAME_PROXY="proxy-$HOSTNAME_INPUT"
+  HOSTNAME_PROXY="$HOSTNAME_INPUT"
   HOSTNAME_AGENT="$HOSTNAME_PROXY"
 
   hostnamectl set-hostname "$HOSTNAME_PROXY"
