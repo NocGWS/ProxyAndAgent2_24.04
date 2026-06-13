@@ -108,8 +108,9 @@ function Hostname_proxy() {
     exit 1
   fi
 
-  if [[ ! "$HOSTNAME_INPUT" =~ ^[A-Za-z0-9._-]+$ ]]; then
+  if [[ ! "$HOSTNAME_INPUT" =~ ^[A-Za-z0-9.-]+$ ]]; then
     log "Error: el valor ingresado contiene caracteres no permitidos."
+    log "Use solo letras, números, punto o guion. No use guion bajo."
     exit 1
   fi
 
@@ -118,7 +119,7 @@ function Hostname_proxy() {
 
   hostnamectl set-hostname "$HOSTNAME_PROXY"
 
-  log "Hostname Linux configurado: $HOSTNAME_PROXY"
+  log "Hostname Linux solicitado: $HOSTNAME_PROXY"
   log "ProxyName: $HOSTNAME_PROXY"
   log "Agent Hostname: $HOSTNAME_AGENT"
 }
