@@ -22,18 +22,22 @@ fi
 REQUIRED_OS_VERSION="24.04"
 
 #************** DATOS ZABBIX PROXY *******************
-ZABBIX_SERVER_IP_1="190.111.153.100"
-ZABBIX_SERVER_IP_2="190.111.153.99"
+#ZABBIX_SERVER_IP_1="190.111.153.100"
+#ZABBIX_SERVER_IP_2="190.111.153.99"
+ZABBIX_SERVER_IP_1="zabbix01.nubecentral.com"
+ZABBIX_SERVER_IP_2="zabbix02.nubecentral.com"
 #VALIDACION DE LA VERSION DEL PROXY zabbix
 ZABBIX_PROXY_VERSION="6.0"
 
 #************** DATOS DATA BASE MYSQL *******************
 #SOLICITUD DE LA CONTRASEÑA AL USUARIO PARA LA CREACION O EL USO DE LA BASE DE DATOS MYSQL
 
-echo "Ingrese la contraseña segura para la creacion de la Base de Datos, si ya tiene instalado MySql ingrese la contraseña ya configurada"
-read Pass_BD
+echo "Ingrese la contraseña segura para la creación de la Base de Datos."
+echo "Si MySQL ya está instalado, ingrese la contraseña ya configurada."
+read -s -p "Password MySQL: " Pass_BD
+echo
 
-DB_PASSWORD=$Pass_BD
+DB_PASSWORD="$Pass_BD"
 
 
 #UBICACION DE ARCHIVO DE CIFRADO
@@ -87,22 +91,6 @@ log() {
 log "El password ingresado por el cliente es: $Pass_BD"
 
 #************** DATOS ZABBIX AGENTE *******************
-#VALIDACION DE LA VERSION DEL AGENTE2
-ZABBIX_AGENT_VERSION="6.0"
-
-#VALIDACION DEL HOSTNAME DEL AGENTE zabbix
-# Obtener el hostname actual
-hostname=$(hostname)
-
-# Validar el hostname
-if [ -n "$hostname" ]; then
-    log "El hostname es válido: $hostname"
-else
-    log "El hostname no es válido."
-    exit 1
-fi
-
-HOSTNAME_AGENT=$hostname
 
 # OBTENER LA DIRECCIÓN IP ACTUAL DEL SISTEMA
 IP_ACTUAL=$(ip route get 1 | awk '{print $(NF-2);exit}')
@@ -112,17 +100,30 @@ IP_ACTUAL=$(ip route get 1 | awk '{print $(NF-2);exit}')
 #************** DATOS ZABBIX PROXY *******************************************
 #VALIDACION DEL HOSTNAME DEL PROXY zabbix
 # Solicitar al usuario que ingrese un dato
-function Hostname_proxy (){
-echo "Ingrese el Numero de Oportunidad para la creacion del Proxyname:"
-read HOSTNAME_PROXY
 
-# Validar si se ingresó un dato
-if [ -z "$HOSTNAME_PROXY" ]; then
-    log "¡Error! No se ingresó ningún dato, porfavor volver a intentar a ejecutar el Script"
+function Hostname_proxy() {
+  echo "Ingrese el número de oportunidad/contrato para la creación del Proxy:"
+  read HOSTNAME_INPUT
+
+  if [ -z "$HOSTNAME_INPUT" ]; then
+    log "Error: no se ingresó número de oportunidad/contrato."
     exit 1
-else
-    log "Has ingresado la siguiente Oportunidad: $HOSTNAME_PROXY para nombrar al Proxyname"
-fi
+  fi
+
+  if [[ ! "$HOSTNAME_INPUT" =~ ^[A-Za-z0-9.-]+$ ]]; then
+    log "Error: el valor ingresado contiene caracteres no permitidos."
+    log "Use solo letras, números, punto o guion. No use guion bajo."
+    exit 1
+  fi
+
+  HOSTNAME_PROXY="$HOSTNAME_INPUT"
+  HOSTNAME_AGENT="$HOSTNAME_PROXY"
+
+  hostnamectl set-hostname "$HOSTNAME_PROXY"
+
+  log "Hostname Linux solicitado: $HOSTNAME_PROXY"
+  log "ProxyName: $HOSTNAME_PROXY"
+  log "Agent Hostname: $HOSTNAME_AGENT"
 }
 
 #************** ENCRIPTACION DE ZABBIX PROXY *******************************************
@@ -154,7 +155,7 @@ function check_root() {
   fi
 }
 
-# Función para verificar que el sistema operativo sea Ubuntu 22.04
+# Función para verificar que el sistema operativo sea Ubuntu 24.04
 function check_os_version() {
 
   log "=============================="
@@ -191,7 +192,7 @@ function check_connectivity() {
       log "Error: No se pudo instalar nc. Por favor, instálelo manualmente y ejecute el script de nuevo"
       exit 1
     fi
-        fi
+        fi	
 
 # Realizar la verificación de conectividad si nc está presente
 SERVERS=("$ZABBIX_SERVER_IP_1" "$ZABBIX_SERVER_IP_2")
@@ -426,6 +427,7 @@ Config_zabbix_proxy() {
   fi
 }
 
+
 # Funcion de Recargar la caché de configuración de Zabbix Proxy
 RecargaCache() {
 
@@ -436,6 +438,23 @@ else
   log "Error: No se pudo recargar la caché de configuración de Zabbix Proxy."
   exit 1
 fi
+}
+
+function validate_hostname_final() {
+  log "=============================="
+  log "Validando hostname final"
+  log "=============================="
+
+  CURRENT_HOSTNAME=$(hostnamectl --static)
+
+  if [ "$CURRENT_HOSTNAME" != "$HOSTNAME_PROXY" ]; then
+    log "Error: Hostname final incorrecto."
+    log "Esperado: $HOSTNAME_PROXY"
+    log "Actual: $CURRENT_HOSTNAME"
+    exit 1
+  fi
+
+  log "Hostname final validado correctamente: $CURRENT_HOSTNAME"
 }
 
 
@@ -457,6 +476,7 @@ ZabbixBD
 BannerConfZabbixProxy
 Config_zabbix_proxy
 RecargaCache
+validate_hostname_final
 
 # Marca el archivo como ejecutado
 touch "$flag_file"
